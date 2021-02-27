@@ -13,7 +13,7 @@ namespace AzureFunctions
     {
         private static HttpClient client = new HttpClient();
 
-        [FunctionName("SaveToCosmosDb")]
+        [FunctionName("saveToCosmosDb")]
         public static void Run(
             [IoTHubTrigger("messages/events", Connection = "iotHubConection", ConsumerGroup = "cosmosdb")] EventData message,
             [CosmosDB(
