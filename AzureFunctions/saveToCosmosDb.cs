@@ -19,7 +19,7 @@ namespace AzureFunctions
             [CosmosDB(
                 databaseName: "IOT20",
                 collectionName: "Messages",
-                ConnectionStringSetting = "ComosDbConnection",
+                ConnectionStringSetting = "cosmosDbConnection",
                 CreateIfNotExists = true
             )]out dynamic cosmos,
             ILogger log
