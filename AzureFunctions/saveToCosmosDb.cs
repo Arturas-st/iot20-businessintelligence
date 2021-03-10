@@ -6,6 +6,8 @@ using Microsoft.Azure.EventHubs;
 using System.Text;
 using System.Net.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System;
 
 namespace AzureFunctions
 {
@@ -15,18 +17,46 @@ namespace AzureFunctions
 
         [FunctionName("saveToCosmosDb")]
         public static void Run(
-            [IoTHubTrigger("messages/events", Connection = "iotHubConection", ConsumerGroup = "cosmosdb")] EventData message,
+            [IoTHubTrigger("messages/events", Connection = "iotHubConection", ConsumerGroup = "cosmosdb1")] EventData message,
             [CosmosDB(
                 databaseName: "IOT20",
                 collectionName: "Messages",
-                ConnectionStringSetting = "cosmosDbConnection",
-                CreateIfNotExists = true
+                CreateIfNotExists = true,
+                ConnectionStringSetting = "cosmosDbConnection"
+                
             )]out dynamic cosmos,
-            ILogger log
-        )
+            ILogger log)
+        
         {
-            log.LogInformation($"messages/events: {Encoding.UTF8.GetString(message.Body.Array)}");
-            cosmos = Encoding.UTF8.GetString(message.Body.Array);
+            try
+            {
+                var msg = JsonConvert.DeserializeObject<DhtMeasurement>(Encoding.UTF8.GetString(message.Body.Array));
+                msg.DeviceId = message.SystemProperties["iothub-connection-device-id"].ToString();
+                msg.School = message.Properties["School"].ToString();
+                msg.Name = message.Properties["Name"].ToString();
+                
+                
+         
+
+                var json = JsonConvert.SerializeObject(msg);
+                cosmos = json;
+                log.LogInformation($"Measurement was saved to Cosmos DB, Message::{json}");
+
+
+
+            }
+            catch(Exception e)
+            {
+            cosmos = null;
+            log.LogInformation($"Unable to process Request, Error::{e.Message}");
+
+
+            }
+
+            
+           
+            
+
         }
     }
 }

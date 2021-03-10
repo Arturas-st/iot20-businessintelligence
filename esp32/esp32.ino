@@ -1,83 +1,65 @@
 #include <WiFi.h>
+#include "time.h"
+#include "Esp32MQTTClient.h"
 #include "AzureIotHub.h"
-//#include "Esp32MQTTClient.h"
-#include <Esp32MQTTClient.h>
-#include <RH_ASK.h>
-#include <SPI.h>
-//#include "ArduinoJson.h"
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include "time.h"
 
-#define INTERVAL 5000
-#define DEVICE_ID "esp32"
-#define MESSAGE_LEN_MAX 256
-#define DHT_TYPE DHT11
+#define INTERVAL 1000 *5
 #define DHT_PIN 21
+#define DEVICE_TYPE "dht"
+#define DHT_TYPE DHT11
 
- char * ssid = "TN_wifi_F45E33";
- char *pass = "PD4XEEYPMP";
- char *connectionString = "HostName=IoT20-hub.azure-devices.net;DeviceId=device4;SharedAccessKey=Src3XkaU+PyxnUnrWSr5tedpUCiqY51T9WuNQ29ncus=";
- bool messagePending = false;
+char * ssid = "TN_wifi_F45E33";
+char *pass = "PD4XEEYPMP";
+char *connectionString = "HostName=IoT20-hub.azure-devices.net;DeviceId=esp32;SharedAccessKey=G7t14A1Tyf4K6AGdD/ALY4UY6eph+lPE53bybeqsNIA=";
 
- const char* ntpServer = "pool.ntp.org";
- const long  gmtOffset_sec = 3600;
- const int   daylightOffset_sec = 3600;
-
- void initWifi(){
-  WiFi.begin(ssid, pass);
-  while(WiFi.status() != WL_CONNECTED){
-    delay(1000);
-  }
- }
- void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result){
-  if(result == IOTHUB_CLIENT_CONFIRMATION_OK){
-    Serial.println("Confirmed");
-    messagePending = false;
-  }
- }
-
+bool messagePending = false;
+unsigned long prevMillis = 0;
+unsigned long epochTime;
+float prevTemp = 0;
 DHT dht(DHT_PIN, DHT_TYPE);
- 
+
 void setup() {
-  Serial.begin(115200);
-  dht.begin();
+  initSerial();
   initWifi();
-
-  Esp32MQTTClient_Init((uint8_t *)connectionString, true);
-  Esp32MQTTClient_SetSendConfirmationCallback(SendConfirmationCallback);
-
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-}
-
-void loop() {
- if(!messagePending){
-   messagePending = true;
-
+  initDHT();
+  initDevice();
   delay(2000);
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
-    return;
+
+  configTime(3600,3600,"pool.ntp.org");
+}
+void loop() {
+  unsigned long currentMillis = millis();
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  if(!messagePending){
+    if((currentMillis - prevMillis) > INTERVAL){
+      prevMillis = currentMillis;
+      epochTime = time(NULL);
+
+      if(!(std::isnan(temperature)) && !(std::isnan(humidity))){
+
+        if(temperature > (prevTemp +1) || temperature < (prevTemp - 1)){
+           prevTemp = temperature;
+           char payload[256];
+      
+           DynamicJsonDocument doc(1024);
+           doc["deviceType"] = DEVICE_TYPE;
+           doc["temp"] = temperature;
+           doc["hum"] = humidity;
+           doc["ts"] = epochTime;
+           
+           
+           
+           serializeJson(doc, payload);
+           SendMessage(payload);
+
+        }
+      }     
+    }
   }
-   char payload[MESSAGE_LEN_MAX];
-   char timeStamp[24];
-   strftime(timeStamp, 24, "%F" "%R", &timeinfo);
-
-  DynamicJsonDocument doc(sizeof(payload));
-  doc["device"] = DEVICE_ID;
-  doc["temperature"] = dht.readTemperature();
-  doc["humidity"] = dht.readHumidity();
-  doc["time"] = timeStamp;
-  serializeJson(doc, payload);
-  Serial.println(payload);
-  
-  EVENT_INSTANCE *message = Esp32MQTTClient_Event_Generate(payload, MESSAGE);
-  Esp32MQTTClient_SendEventInstance(message);
-  
-
-  delay (INTERVAL);
- }
-
+  Esp32MQTTClient_Check();
+  delay(10);
 }
