@@ -10,9 +10,9 @@
 #define DEVICE_TYPE "dht"
 #define DHT_TYPE DHT11
 
-char * ssid = "TN_wifi_F45E33";
-char *pass = "PD4XEEYPMP";
-char *connectionString = "HostName=IoT20-hub.azure-devices.net;DeviceId=esp32;SharedAccessKey=G7t14A1Tyf4K6AGdD/ALY4UY6eph+lPE53bybeqsNIA=";
+char * ssid = "";
+char *pass = "";
+char *connectionString = "";
 
 bool messagePending = false;
 unsigned long prevMillis = 0;

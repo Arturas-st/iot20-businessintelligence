@@ -34,15 +34,11 @@ namespace AzureFunctions
                 msg.DeviceId = message.SystemProperties["iothub-connection-device-id"].ToString();
                 msg.School = message.Properties["School"].ToString();
                 msg.Name = message.Properties["Name"].ToString();
-                
-                
-         
+                       
 
                 var json = JsonConvert.SerializeObject(msg);
                 cosmos = json;
                 log.LogInformation($"Measurement was saved to Cosmos DB, Message::{json}");
-
-
 
             }
             catch(Exception e)
@@ -51,11 +47,7 @@ namespace AzureFunctions
             log.LogInformation($"Unable to process Request, Error::{e.Message}");
 
 
-            }
-
-            
-           
-            
+            }                                
 
         }
     }
